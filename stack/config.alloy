@@ -1,0 +1,75 @@
+// 1. Receiver: Listens for OTLP traffic
+otelcol.receiver.otlp "default" {
+    grpc { endpoint = "0.0.0.0:4317" }
+    http { endpoint = "0.0.0.0:4318" }
+    output {
+        metrics = [otelcol.processor.batch.default.input]
+        logs    = [otelcol.processor.batch.default.input]
+        traces  = [otelcol.processor.batch.default.input]
+    }
+}
+
+// 2. Processor: Batches data
+otelcol.processor.batch "default" {
+    timeout = "200ms"
+    send_batch_size = 1000
+    output {
+        metrics = [otelcol.exporter.otlphttp.to_mimir.input]
+        logs    = [otelcol.processor.attributes.loki_labels.input]
+        traces  = [otelcol.exporter.otlp.to_tempo.input]
+    }
+}
+
+// 3. Processor: Maps OTLP attributes to Loki labels
+otelcol.processor.attributes "loki_labels" {
+    action {
+        key     = "loki.resource.labels"
+        action  = "insert"
+        value   = "service.name, deployment.environment.name"
+    }
+    output {
+        logs    = [otelcol.exporter.loki.to_loki.input]
+    }
+}
+
+// 4. Exporter: Loki Adapter
+otelcol.exporter.loki "to_loki" {
+    forward_to = [loki.write.to_loki.receiver]
+}
+
+// 5. Writer: Loki
+loki.write "to_loki" {
+    endpoint {
+        url = "http://loki:3100/loki/api/v1/push"
+    }
+}
+
+// 6. Exporter: Tempo (Traces)
+otelcol.exporter.otlp "to_tempo" {
+    client {
+        endpoint = "tempo:4317"
+        tls { insecure = true }
+    }
+}
+
+// 7. Exporter: Mimir (Metrics)
+// Mimir has no native OTLP/gRPC receiver (its grpc_listen_port is for internal
+// ring/query-frontend traffic only) - metrics must go over OTLP/HTTP instead.
+otelcol.exporter.otlphttp "to_mimir" {
+    client {
+        endpoint = "http://mimir:9009/otlp"
+        tls { insecure = true }
+    }
+}
+
+// 8. Prometheus metrics for Alloy itself
+prometheus.scrape "alloy_metrics" {
+    targets = [{"__address__" = "0.0.0.0:12345"}]
+    forward_to = [prometheus.remote_write.alloy_metrics.receiver]
+}
+
+prometheus.remote_write "alloy_metrics" {
+    endpoint {
+        url = "http://mimir:9009/api/v1/push"
+    }
+}

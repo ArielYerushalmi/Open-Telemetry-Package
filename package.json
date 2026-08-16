@@ -1,0 +1,34 @@
+{
+  "name": "@panther/OpenTelemetry",
+  "version": "1.0.0",
+  "description": "OpenTelemetry integration",
+  "main": "dist/otel.js",
+  "types": "dist/otel.d.ts",
+  "scripts": {
+    "build": "npx tsc",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/api-logs": "^0.220.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.78.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.220.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.220.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.220.0",
+    "@opentelemetry/host-metrics": "^0.36.0",
+    "@opentelemetry/instrumentation-nestjs-core": "^0.66.0",
+    "@opentelemetry/instrumentation-pino": "^0.66.0",
+    "@opentelemetry/instrumentation-winston": "^0.64.0",
+    "@opentelemetry/resources": "^2.9.0",
+    "@opentelemetry/sdk-logs": "^0.220.0",
+    "@opentelemetry/sdk-metrics": "^2.9.0",
+    "@opentelemetry/sdk-node": "^0.220.0",
+    "@opentelemetry/sdk-trace-base": "^2.9.0",
+    "@opentelemetry/semantic-conventions": "^1.41.1",
+    "node-tgz-downloader": "^3.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.8",
+    "typescript": "^5.9.3"
+  }
+}

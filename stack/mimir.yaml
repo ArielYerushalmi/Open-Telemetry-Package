@@ -1,0 +1,17 @@
+target: all
+multitenancy_enabled: false
+server:
+  http_listen_port: 9009
+  grpc_listen_port: 9095
+  log_level: info
+blocks_storage:
+  backend: filesystem
+  filesystem:
+    dir: /alloy-data/mimir/data
+  tsdb:
+    head_compaction_interval: 10m
+ingester:
+  ring:
+    replication_factor: 1
+    zone_awareness_enabled: false
+    heartbeat_timeout: 1m

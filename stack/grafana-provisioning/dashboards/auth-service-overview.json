@@ -1,0 +1,428 @@
+{
+  "title": "Auth Service - Observability",
+  "description": "Logs, metrics, and traces for auth-service, fed by its OpenTelemetry SDK through Alloy into Mimir/Loki/Tempo.",
+  "uid": "auth-service-overview",
+  "tags": ["auth-service", "opentelemetry", "mimir", "loki", "tempo"],
+  "editable": true,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "traceId",
+        "type": "textbox",
+        "label": "Trace ID",
+        "description": "Paste a Trace ID from the table below to render its full span waterfall.",
+        "query": "",
+        "current": { "value": "", "text": "" },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    { "id": 1, "type": "row", "title": "Core Service KPIs", "collapsed": false, "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "panels": [] },
+
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total HTTP Requests",
+      "description": "Total inbound HTTP requests handled by auth-service over the selected range (Mimir, from the HTTP server auto-instrumentation).",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 0, "y": 1, "w": 8, "h": 5 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "sum(increase(http_server_duration_count{job=\"AuthService\"}[$__range]))",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Error Rate Percentage",
+      "description": "Share of requests with a 4xx/5xx status code vs total, over the selected range (Mimir).",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 8, "y": 1, "w": 8, "h": 5 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "100 * sum(increase(http_server_duration_count{job=\"AuthService\", http_status_code=~\"4..|5..\"}[$__range])) / sum(increase(http_server_duration_count{job=\"AuthService\"}[$__range]))",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 10 },
+              { "color": "red", "value": 25 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "95th Percentile Latency",
+      "description": "p95 HTTP server request duration over the last 5m (Mimir, http_server_duration_bucket, milliseconds).",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 16, "y": 1, "w": 8, "h": 5 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_duration_bucket{job=\"AuthService\"}[5m])))",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 200 },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+
+    { "id": 5, "type": "row", "title": "Performance Over Time", "collapsed": false, "gridPos": { "x": 0, "y": 6, "w": 24, "h": 1 }, "panels": [] },
+
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Request Throughput (req/s by route & status)",
+      "description": "Requests per second handled by auth-service, split by route and status code.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "sum by (http_route, http_status_code) (rate(http_server_duration_count{job=\"AuthService\"}[$__rate_interval]))",
+          "legendFormat": "{{http_route}} ({{http_status_code}})"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": ".*\\(5.*\\)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": ".*\\(2.*\\)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          }
+        ]
+      }
+    },
+
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Latency Percentiles (p50 / p90 / p95)",
+      "description": "HTTP server request duration percentiles from http_server_duration_bucket.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_duration_bucket{job=\"AuthService\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "histogram_quantile(0.90, sum by (le) (rate(http_server_duration_bucket{job=\"AuthService\"}[5m])))",
+          "legendFormat": "p90"
+        },
+        {
+          "refId": "C",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_duration_bucket{job=\"AuthService\"}[5m])))",
+          "legendFormat": "p95"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      }
+    },
+
+    { "id": 8, "type": "row", "title": "Runtime Health", "collapsed": false, "gridPos": { "x": 0, "y": 15, "w": 24, "h": 1 }, "panels": [] },
+
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Event Loop Delay",
+      "description": "Node.js event loop delay (mean / p99) for auth-service - a rising trend indicates the process is falling behind.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "nodejs_eventloop_delay_mean{job=\"AuthService\"}",
+          "legendFormat": "mean"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "nodejs_eventloop_delay_p99{job=\"AuthService\"}",
+          "legendFormat": "p99"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5, "spanNulls": true }
+        },
+        "overrides": []
+      }
+    },
+
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "V8 Heap Used",
+      "description": "V8 heap memory usage for the auth-service process.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "v8js_memory_heap_used{job=\"AuthService\"}",
+          "legendFormat": "{{memory_type}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        },
+        "overrides": []
+      }
+    },
+
+    { "id": 9, "type": "row", "title": "Log Stream & Trace Ingestion", "collapsed": false, "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 }, "panels": [] },
+
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Log Volume by Level",
+      "description": "AuthService log lines per level, from Loki (auto-detected level).",
+      "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+          "expr": "sum by (detected_level) (count_over_time({service_name=\"AuthService\"}[$__interval]))",
+          "legendFormat": "{{detected_level}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "ERROR" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "FATAL" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "dark-red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "WARN" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "INFO" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          }
+        ]
+      }
+    },
+
+    {
+      "id": 10,
+      "type": "logs",
+      "title": "Live Application Logs",
+      "description": "Live log stream for auth-service, shipped via the shared panther-common logger's OTel log emitter.",
+      "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+      "gridPos": { "x": 0, "y": 30, "w": 24, "h": 9 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+          "expr": "{service_name=\"AuthService\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      }
+    },
+
+    { "id": 15, "type": "row", "title": "Trace Waterfall", "collapsed": false, "gridPos": { "x": 0, "y": 39, "w": 24, "h": 1 } },
+
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Recent Traces (AuthService) - click a Trace ID to open it, or copy it into the Trace ID box above",
+      "description": "Recent traces for auth-service. Clicking a Trace ID opens the full waterfall in Explore; copying it into the 'Trace ID' dashboard variable renders the waterfall inline in the panel below.",
+      "datasource": {"type": "tempo", "uid": "P214B5B846CF3925F"},
+      "gridPos": { "x": 0, "y": 40, "w": 24, "h": 9 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "tempo", "uid": "P214B5B846CF3925F"},
+          "queryType": "traceql",
+          "query": "{ resource.service.name = \"AuthService\" }",
+          "tableType": "traces",
+          "limit": 20
+        }
+      ]
+    },
+
+    {
+      "id": 16,
+      "type": "traces",
+      "title": "Trace Detail: $traceId",
+      "description": "Full span waterfall for the Trace ID entered in the 'Trace ID' variable above - parent/child span tree, timing bars, and tags (HTTP server spans, downstream Mongo/LDAP calls, etc).",
+      "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
+      "timeFrom": "24h",
+      "gridPos": { "x": 0, "y": 49, "w": 24, "h": 16 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
+          "queryType": "traceql",
+          "query": "${traceId}"
+        }
+      ],
+      "options": {
+        "showSpanFilters": true
+      }
+    },
+
+    { "id": 18, "type": "row", "title": "Service Dependency Graph", "collapsed": false, "gridPos": { "x": 0, "y": 65, "w": 24, "h": 1 } },
+
+    {
+      "id": 17,
+      "type": "nodeGraph",
+      "title": "Service Dependency Graph",
+      "description": "Live service map for auth-service, computed by Tempo's metrics-generator (service-graphs processor) from real traces and stored in Mimir. Shows call rate, error rate, and duration between services.",
+      "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
+      "gridPos": { "x": 0, "y": 66, "w": 24, "h": 12 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
+          "queryType": "serviceMap"
+        }
+      ]
+    }
+  ]
+}

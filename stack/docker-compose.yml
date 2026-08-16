@@ -1,0 +1,80 @@
+name: open-telemetry-package
+
+services:
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    environment:
+      - ALLOW_UI_DEBUGGING=true
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "12345:12345" # Alloy UI/Metrics
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy
+    networks: [otel-net]
+    command: 
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    depends_on: [loki, mimir, tempo]
+
+  # Loki - Logs
+  loki:
+    image: grafana/loki:latest
+    ports: ["3100:3100"]
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - C:\alloy-data\loki\data:/alloy-data/loki/data
+    networks: [otel-net]
+
+  # Mimir - Metrics (instead of prometheus)
+  mimir:
+    image: grafana/mimir:latest
+    command: -config.file=/etc/mimir.yaml -target=all
+    volumes:
+      - ./mimir.yaml:/etc/mimir.yaml
+      - C:\alloy-data\mimir\data:/alloy-data/mimir/data
+    ports:
+      - "9009:9009"
+    networks: [otel-net]
+
+  # Tempo - Traces
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo.yaml", "-target=all"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+      - C:\alloy-data\tempo\data:/alloy-data/tempo/data
+      - C:\alloy-data\tempo\wal:/alloy-data/tempo/wal
+      - C:\alloy-data\tempo\generator-wal:/alloy-data/tempo/generator-wal
+    ports:
+      - "3200:3200" # Tempo query API (for Grafana / debugging only)
+    networks: [otel-net]
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3030:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on: [loki, mimir, tempo]
+    volumes:
+      - ./grafana-provisioning:/etc/grafana/provisioning
+      - C:\alloy-data\grafana\data:/alloy-data/grafana/data
+    networks: [otel-net]
+
+networks:
+  otel-net:
+    driver: bridge
+
+volumes:
+  loki-data:
+  mimir-data:
+  tempo-data:
+  grafana-data:
