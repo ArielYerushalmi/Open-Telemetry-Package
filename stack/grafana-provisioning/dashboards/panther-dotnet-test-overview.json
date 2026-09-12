@@ -1,8 +1,8 @@
 {
-  "title": "Panther .NET Sample Service - Observability",
-  "description": "Logs, metrics, and traces for panther-otel-sample-service (Panther.OpenTelemetry.SampleService, netcoreapp3.1), fed by the Panther.OpenTelemetry .NET library through Alloy into Mimir/Loki/Tempo. Demonstrates the .NET pipeline works end-to-end, mirroring auth-service-overview.json for the Node side.",
+  "title": "Panther .NET Test Service - Observability",
+  "description": "Logs, metrics, and traces for panther-otel-test-dotnet (Panther.OpenTelemetry.TestDotNet, netcoreapp3.1), fed by the Panther.OpenTelemetry .NET library through Alloy into Mimir/Loki/Tempo. Exercises HTTP (auth-service), MongoDB, and Kafka to prove the .NET pipeline works end-to-end, mirroring auth-service-overview.json for the Node side.",
   "uid": "panther-dotnet-sample-overview",
-  "tags": ["dotnet", "panther-otel-sample-service", "opentelemetry", "mimir", "loki", "tempo"],
+  "tags": ["dotnet", "panther-otel-test-dotnet", "opentelemetry", "mimir", "loki", "tempo"],
   "editable": true,
   "graphTooltip": 1,
   "timezone": "browser",
@@ -37,7 +37,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "sum(increase(http_server_request_duration_count{job=\"panther-otel-sample-service\"}[$__range]))",
+          "expr": "sum(increase(http_server_request_duration_count{job=\"panther-otel-test-dotnet\"}[$__range]))",
           "instant": true,
           "range": false
         }
@@ -64,14 +64,14 @@
       "id": 3,
       "type": "stat",
       "title": "Error Rate Percentage",
-      "description": "Share of requests with a 5xx status code vs total, over the selected range (Mimir). The sample's /demo/error endpoint deliberately fails ~20% of the time to populate this.",
+      "description": "Share of requests with a 5xx status code vs total, over the selected range (Mimir). Reflects /simulate calls plus the auth-service /hc probe (5xx when LDAP is unreachable from this environment).",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
       "gridPos": { "x": 8, "y": 1, "w": 8, "h": 5 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "100 * sum(increase(http_server_request_duration_count{job=\"panther-otel-sample-service\", http_response_status_code=~\"5..\"}[$__range])) / sum(increase(http_server_request_duration_count{job=\"panther-otel-sample-service\"}[$__range]))",
+          "expr": "100 * sum(increase(http_server_request_duration_count{job=\"panther-otel-test-dotnet\", http_response_status_code=~\"5..\"}[$__range])) / sum(increase(http_server_request_duration_count{job=\"panther-otel-test-dotnet\"}[$__range]))",
           "instant": true,
           "range": false
         }
@@ -114,7 +114,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-sample-service\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-test-dotnet\"}[5m])))",
           "instant": true,
           "range": false
         }
@@ -157,7 +157,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_count{job=\"panther-otel-sample-service\"}[$__rate_interval]))",
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_count{job=\"panther-otel-test-dotnet\"}[$__rate_interval]))",
           "legendFormat": "{{http_response_status_code}}"
         }
       ],
@@ -194,19 +194,19 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-sample-service\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-test-dotnet\"}[5m])))",
           "legendFormat": "p50"
         },
         {
           "refId": "B",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "histogram_quantile(0.90, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-sample-service\"}[5m])))",
+          "expr": "histogram_quantile(0.90, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-test-dotnet\"}[5m])))",
           "legendFormat": "p90"
         },
         {
           "refId": "C",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-sample-service\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-test-dotnet\"}[5m])))",
           "legendFormat": "p95"
         }
       ],
@@ -233,16 +233,16 @@
     {
       "id": 21,
       "type": "timeseries",
-      "title": "demo_requests_total (custom Counter, by status code)",
-      "description": "Custom Meter/Counter defined in Telemetry.cs and recorded from DemoController - proves app-level custom metrics (not just auto-instrumentation) reach Mimir.",
+      "title": "integration_step_total (custom Counter, by step/result)",
+      "description": "Custom Meter/Counter defined in Telemetry.cs and recorded from IntegrationCycleRunner for each of the auth-service/mongo/kafka steps - proves app-level custom metrics (not just auto-instrumentation) reach Mimir.",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
       "gridPos": { "x": 0, "y": 16, "w": 12, "h": 7 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "sum by (http_status_code) (rate(demo_requests_total{job=\"panther-otel-sample-service\"}[$__rate_interval]))",
-          "legendFormat": "{{http_status_code}}"
+          "expr": "sum by (step, result) (rate(integration_step_total{job=\"panther-otel-test-dotnet\"}[$__rate_interval]))",
+          "legendFormat": "{{step}} ({{result}})"
         }
       ],
       "options": {
@@ -256,11 +256,11 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "500" },
+            "matcher": { "id": "byRegexp", "options": ".*\\(error\\)" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
           },
           {
-            "matcher": { "id": "byName", "options": "200" },
+            "matcher": { "id": "byRegexp", "options": ".*\\(ok\\)" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
           }
         ]
@@ -270,16 +270,16 @@
     {
       "id": 22,
       "type": "timeseries",
-      "title": "demo_request_duration_seconds (custom Histogram, p95)",
-      "description": "Custom Meter/Histogram recorded alongside demo_requests_total - includes both fast (/demo/ok) and deliberately slow (/demo/slow) synthetic requests.",
+      "title": "integration_step_duration_seconds (custom Histogram, p95 by step)",
+      "description": "Custom Meter/Histogram recorded alongside integration_step_total - p95 duration of each auth-service/mongo/kafka step.",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
       "gridPos": { "x": 12, "y": 16, "w": 12, "h": 7 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(demo_request_duration_seconds_bucket{job=\"panther-otel-sample-service\"}[5m])))",
-          "legendFormat": "p95"
+          "expr": "histogram_quantile(0.95, sum by (le, step) (rate(integration_step_duration_seconds_bucket{job=\"panther-otel-test-dotnet\"}[5m])))",
+          "legendFormat": "{{step}} p95"
         }
       ],
       "options": {
@@ -308,7 +308,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "process_runtime_dotnet_gc_collections_count{job=\"panther-otel-sample-service\"}",
+          "expr": "process_runtime_dotnet_gc_collections_count{job=\"panther-otel-test-dotnet\"}",
           "legendFormat": "{{generation}}"
         }
       ],
@@ -336,7 +336,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "process_runtime_dotnet_gc_objects_size{job=\"panther-otel-sample-service\"}",
+          "expr": "process_runtime_dotnet_gc_objects_size{job=\"panther-otel-test-dotnet\"}",
           "legendFormat": "heap bytes"
         }
       ],
@@ -359,14 +359,14 @@
       "id": 13,
       "type": "timeseries",
       "title": "Log Volume by Level",
-      "description": "panther-otel-sample-service log lines per level, from Loki (auto-detected level).",
+      "description": "panther-otel-test-dotnet log lines per level, from Loki (auto-detected level).",
       "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
       "gridPos": { "x": 0, "y": 32, "w": 24, "h": 6 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
-          "expr": "sum by (detected_level) (count_over_time({service_name=\"panther-otel-sample-service\"}[$__interval]))",
+          "expr": "sum by (detected_level) (count_over_time({service_name=\"panther-otel-test-dotnet\"}[$__interval]))",
           "legendFormat": "{{detected_level}}"
         }
       ],
@@ -400,14 +400,14 @@
       "id": 10,
       "type": "logs",
       "title": "Live Application Logs",
-      "description": "Live log stream for panther-otel-sample-service, shipped via Panther.OpenTelemetry's AddPantherOpenTelemetry() -> ILogger -> OTLP -> Loki.",
+      "description": "Live log stream for panther-otel-test-dotnet, shipped via Panther.OpenTelemetry's AddPantherOpenTelemetry() -> ILogger -> OTLP -> Loki.",
       "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
       "gridPos": { "x": 0, "y": 38, "w": 24, "h": 9 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
-          "expr": "{service_name=\"panther-otel-sample-service\"}"
+          "expr": "{service_name=\"panther-otel-test-dotnet\"}"
         }
       ],
       "options": {
@@ -428,7 +428,7 @@
       "id": 14,
       "type": "table",
       "title": "Recent Traces - click a Trace ID to open it, or copy it into the Trace ID box above",
-      "description": "Recent traces for panther-otel-sample-service. Clicking a Trace ID opens the full waterfall in Explore; copying it into the 'Trace ID' dashboard variable renders the waterfall inline in the panel below.",
+      "description": "Recent traces for panther-otel-test-dotnet. Clicking a Trace ID opens the full waterfall in Explore; copying it into the 'Trace ID' dashboard variable renders the waterfall inline in the panel below.",
       "datasource": {"type": "tempo", "uid": "P214B5B846CF3925F"},
       "gridPos": { "x": 0, "y": 48, "w": 24, "h": 9 },
       "targets": [
@@ -436,7 +436,7 @@
           "refId": "A",
           "datasource": {"type": "tempo", "uid": "P214B5B846CF3925F"},
           "queryType": "traceql",
-          "query": "{ resource.service.name = \"panther-otel-sample-service\" }",
+          "query": "{ resource.service.name = \"panther-otel-test-dotnet\" }",
           "tableType": "traces",
           "limit": 20
         }
@@ -447,7 +447,7 @@
       "id": 16,
       "type": "traces",
       "title": "Trace Detail: $traceId",
-      "description": "Full span waterfall for the Trace ID entered in the 'Trace ID' variable above - the root ASP.NET Core server span plus the custom db-query/downstream-call child spans created via Telemetry.ActivitySource in DemoController.",
+      "description": "Full span waterfall for the Trace ID entered in the 'Trace ID' variable above - the root ASP.NET Core server span, the outbound HTTP call into auth-service (a real cross-service, cross-language link since auth-service runs the Node OTel SDK too), plus the mongo.insert/mongo.find/kafka.produce/kafka.consume child spans created via Telemetry.ActivitySource in IntegrationCycleRunner.",
       "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
       "timeFrom": "24h",
       "gridPos": { "x": 0, "y": 57, "w": 24, "h": 16 },
