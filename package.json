@@ -1,9 +1,27 @@
 {
   "name": "@panther/OpenTelemetry",
   "version": "1.0.0",
-  "description": "OpenTelemetry integration",
+  "description": "Shared OpenTelemetry wiring for Panther Node services - exports traces, metrics, and logs via OTLP to the shared Alloy collector.",
   "main": "dist/otel.js",
   "types": "dist/otel.d.ts",
+  "files": [
+    "dist"
+  ],
+  "private": true,
+  "license": "UNLICENSED",
+  "author": "Ariel Yerushalmi <arielyeru@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArielYerushalmi/Open-Telemetry-Package.git"
+  },
+  "keywords": [
+    "opentelemetry",
+    "otel",
+    "tracing",
+    "grafana",
+    "alloy",
+    "panther"
+  ],
   "scripts": {
     "build": "npx tsc",
     "prepare": "npm run build"
