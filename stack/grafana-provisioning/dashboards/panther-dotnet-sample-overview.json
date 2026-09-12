@@ -1,0 +1,467 @@
+{
+  "title": "Panther .NET Sample Service - Observability",
+  "description": "Logs, metrics, and traces for panther-otel-sample-service (Panther.OpenTelemetry.SampleService, netcoreapp3.1), fed by the Panther.OpenTelemetry .NET library through Alloy into Mimir/Loki/Tempo. Demonstrates the .NET pipeline works end-to-end, mirroring auth-service-overview.json for the Node side.",
+  "uid": "panther-dotnet-sample-overview",
+  "tags": ["dotnet", "panther-otel-sample-service", "opentelemetry", "mimir", "loki", "tempo"],
+  "editable": true,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "traceId",
+        "type": "textbox",
+        "label": "Trace ID",
+        "description": "Paste a Trace ID from the table below to render its full span waterfall.",
+        "query": "",
+        "current": { "value": "", "text": "" },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    { "id": 1, "type": "row", "title": "Core Service KPIs", "collapsed": false, "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "panels": [] },
+
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total HTTP Requests",
+      "description": "Total inbound HTTP requests handled by the sample service over the selected range (Mimir, from OpenTelemetry.Instrumentation.AspNetCore).",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 0, "y": 1, "w": 8, "h": 5 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "sum(increase(http_server_request_duration_count{job=\"panther-otel-sample-service\"}[$__range]))",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Error Rate Percentage",
+      "description": "Share of requests with a 5xx status code vs total, over the selected range (Mimir). The sample's /demo/error endpoint deliberately fails ~20% of the time to populate this.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 8, "y": 1, "w": 8, "h": 5 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "100 * sum(increase(http_server_request_duration_count{job=\"panther-otel-sample-service\", http_response_status_code=~\"5..\"}[$__range])) / sum(increase(http_server_request_duration_count{job=\"panther-otel-sample-service\"}[$__range]))",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 10 },
+              { "color": "red", "value": 25 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "95th Percentile Latency",
+      "description": "p95 HTTP server request duration over the last 5m (Mimir, http_server_request_duration_bucket, seconds).",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 16, "y": 1, "w": 8, "h": 5 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-sample-service\"}[5m])))",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.2 },
+              { "color": "red", "value": 0.5 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+
+    { "id": 5, "type": "row", "title": "Performance Over Time", "collapsed": false, "gridPos": { "x": 0, "y": 6, "w": 24, "h": 1 }, "panels": [] },
+
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Request Throughput (req/s by status code)",
+      "description": "Requests per second handled by the sample service, split by HTTP status code.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_count{job=\"panther-otel-sample-service\"}[$__rate_interval]))",
+          "legendFormat": "{{http_response_status_code}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "500" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "200" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          }
+        ]
+      }
+    },
+
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Latency Percentiles (p50 / p90 / p95)",
+      "description": "HTTP server request duration percentiles from http_server_request_duration_bucket.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-sample-service\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "histogram_quantile(0.90, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-sample-service\"}[5m])))",
+          "legendFormat": "p90"
+        },
+        {
+          "refId": "C",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_bucket{job=\"panther-otel-sample-service\"}[5m])))",
+          "legendFormat": "p95"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      }
+    },
+
+    { "id": 20, "type": "row", "title": "Custom Application Metrics", "collapsed": false, "gridPos": { "x": 0, "y": 15, "w": 24, "h": 1 }, "panels": [] },
+
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "demo_requests_total (custom Counter, by status code)",
+      "description": "Custom Meter/Counter defined in Telemetry.cs and recorded from DemoController - proves app-level custom metrics (not just auto-instrumentation) reach Mimir.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "sum by (http_status_code) (rate(demo_requests_total{job=\"panther-otel-sample-service\"}[$__rate_interval]))",
+          "legendFormat": "{{http_status_code}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "500" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "200" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          }
+        ]
+      }
+    },
+
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "demo_request_duration_seconds (custom Histogram, p95)",
+      "description": "Custom Meter/Histogram recorded alongside demo_requests_total - includes both fast (/demo/ok) and deliberately slow (/demo/slow) synthetic requests.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(demo_request_duration_seconds_bucket{job=\"panther-otel-sample-service\"}[5m])))",
+          "legendFormat": "p95"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        },
+        "overrides": []
+      }
+    },
+
+    { "id": 8, "type": "row", "title": "Runtime Health (.NET CLR)", "collapsed": false, "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 }, "panels": [] },
+
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "GC Collections by Generation",
+      "description": "process.runtime.dotnet.gc.collections.count from OpenTelemetry.Instrumentation.Runtime - the .NET counterpart to the Node dashboard's event-loop-delay panel.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "process_runtime_dotnet_gc_collections_count{job=\"panther-otel-sample-service\"}",
+          "legendFormat": "{{generation}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5, "spanNulls": true }
+        },
+        "overrides": []
+      }
+    },
+
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "GC Heap Size",
+      "description": "process.runtime.dotnet.gc.objects.size - total bytes on the managed heap. The .NET counterpart to the Node dashboard's V8 heap panel.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "process_runtime_dotnet_gc_objects_size{job=\"panther-otel-sample-service\"}",
+          "legendFormat": "heap bytes"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        },
+        "overrides": []
+      }
+    },
+
+    { "id": 9, "type": "row", "title": "Log Stream & Trace Ingestion", "collapsed": false, "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 } },
+
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Log Volume by Level",
+      "description": "panther-otel-sample-service log lines per level, from Loki (auto-detected level).",
+      "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+      "gridPos": { "x": 0, "y": 32, "w": 24, "h": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+          "expr": "sum by (detected_level) (count_over_time({service_name=\"panther-otel-sample-service\"}[$__interval]))",
+          "legendFormat": "{{detected_level}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "ERROR" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "WARN" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "INFO" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          }
+        ]
+      }
+    },
+
+    {
+      "id": 10,
+      "type": "logs",
+      "title": "Live Application Logs",
+      "description": "Live log stream for panther-otel-sample-service, shipped via Panther.OpenTelemetry's AddPantherOpenTelemetry() -> ILogger -> OTLP -> Loki.",
+      "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+      "gridPos": { "x": 0, "y": 38, "w": 24, "h": 9 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+          "expr": "{service_name=\"panther-otel-sample-service\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      }
+    },
+
+    { "id": 15, "type": "row", "title": "Trace Waterfall", "collapsed": false, "gridPos": { "x": 0, "y": 47, "w": 24, "h": 1 } },
+
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Recent Traces - click a Trace ID to open it, or copy it into the Trace ID box above",
+      "description": "Recent traces for panther-otel-sample-service. Clicking a Trace ID opens the full waterfall in Explore; copying it into the 'Trace ID' dashboard variable renders the waterfall inline in the panel below.",
+      "datasource": {"type": "tempo", "uid": "P214B5B846CF3925F"},
+      "gridPos": { "x": 0, "y": 48, "w": 24, "h": 9 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "tempo", "uid": "P214B5B846CF3925F"},
+          "queryType": "traceql",
+          "query": "{ resource.service.name = \"panther-otel-sample-service\" }",
+          "tableType": "traces",
+          "limit": 20
+        }
+      ]
+    },
+
+    {
+      "id": 16,
+      "type": "traces",
+      "title": "Trace Detail: $traceId",
+      "description": "Full span waterfall for the Trace ID entered in the 'Trace ID' variable above - the root ASP.NET Core server span plus the custom db-query/downstream-call child spans created via Telemetry.ActivitySource in DemoController.",
+      "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
+      "timeFrom": "24h",
+      "gridPos": { "x": 0, "y": 57, "w": 24, "h": 16 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
+          "queryType": "traceql",
+          "query": "${traceId}"
+        }
+      ],
+      "options": {
+        "showSpanFilters": true
+      }
+    }
+  ]
+}

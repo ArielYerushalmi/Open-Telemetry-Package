@@ -6,7 +6,7 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION, ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from '@opentelemetry/semantic-conventions';
 import { OtelConfig } from './config'
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
-import { BatchSpanProcessor, ConsoleSpanExporter, ParentBasedSampler, SimpleSpanProcessor, SpanProcessor, TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-base';
+import { BatchSpanProcessor, ParentBasedSampler, SpanProcessor, TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-base';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { diag, DiagConsoleLogger, DiagLogLevel, metrics } from '@opentelemetry/api';
@@ -46,14 +46,8 @@ export function initOpenTelemetry(config: OtelConfig): NodeSDK {
         timeoutMillis: EXPORT_TIMEOUT_MS,
     });
 
-    // Batch is the only processor on the hot path; Simple/Console is dev-only
-    // and never touches the network exporter.
+    // Always export via OTLP to Alloy (-> Tempo/Loki/Grafana); never print spans to the terminal.
     const spanProcessors: SpanProcessor[] = [new BatchSpanProcessor(traceExporter)];
-
-    // Add console exporter only in development mode
-    if (config.environment === 'development') {
-        spanProcessors.push(new SimpleSpanProcessor(new ConsoleSpanExporter()));
-    }
 
     const sdk = new NodeSDK({
         resource: appResource,
