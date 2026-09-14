@@ -13,6 +13,21 @@
   "templating": {
     "list": [
       {
+        "name": "services",
+        "type": "query",
+        "label": "Services",
+        "description": "Auto-discovered across every instrumented service (Node and .NET). Multi-select to compare a subset; defaults to All.",
+        "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+        "query": "label_values(up{job!=\"\"} or nodejs_eventloop_delay_mean or http_server_duration_count or process_runtime_dotnet_gc_collections_count, job)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": "All", "value": "$__all" },
+        "hide": 0
+      },
+      {
         "name": "traceId",
         "type": "textbox",
         "label": "Trace ID",
@@ -37,7 +52,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "count(count by (job) (up{job!=\"\"} or nodejs_eventloop_delay_mean or http_server_duration_count))",
+          "expr": "count(count by (job) (up{job=~\"${services:regex}\"} or nodejs_eventloop_delay_mean{job=~\"${services:regex}\"} or http_server_duration_count{job=~\"${services:regex}\"} or process_runtime_dotnet_gc_collections_count{job=~\"${services:regex}\"}))",
           "instant": true,
           "range": false
         }
@@ -71,7 +86,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "sum(increase(http_server_duration_count[$__range]))",
+          "expr": "sum(increase(http_server_duration_count{job=~\"${services:regex}\"}[$__range]))",
           "instant": true,
           "range": false
         }
@@ -105,7 +120,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "100 * sum(increase(http_server_duration_count{http_status_code=~\"4..|5..\"}[$__range])) / sum(increase(http_server_duration_count[$__range]))",
+          "expr": "100 * sum(increase(http_server_duration_count{job=~\"${services:regex}\", http_status_code=~\"4..|5..\"}[$__range])) / sum(increase(http_server_duration_count{job=~\"${services:regex}\"}[$__range]))",
           "instant": true,
           "range": false
         }
@@ -148,7 +163,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_duration_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_duration_bucket{job=~\"${services:regex}\"}[5m])))",
           "instant": true,
           "range": false
         }
@@ -225,7 +240,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "sum by (job) (rate(http_server_duration_count[$__rate_interval]))",
+          "expr": "sum by (job) (rate(http_server_duration_count{job=~\"${services:regex}\"}[$__rate_interval]))",
           "legendFormat": "{{job}}"
         }
       ],
@@ -253,7 +268,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_server_duration_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_server_duration_bucket{job=~\"${services:regex}\"}[5m])))",
           "legendFormat": "{{job}}"
         }
       ],
@@ -281,7 +296,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "100 * sum by (job) (rate(http_server_duration_count{http_status_code=~\"4..|5..\"}[$__rate_interval])) / sum by (job) (rate(http_server_duration_count[$__rate_interval]))",
+          "expr": "100 * sum by (job) (rate(http_server_duration_count{job=~\"${services:regex}\", http_status_code=~\"4..|5..\"}[$__rate_interval])) / sum by (job) (rate(http_server_duration_count{job=~\"${services:regex}\"}[$__rate_interval]))",
           "legendFormat": "{{job}}"
         }
       ],
@@ -310,7 +325,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "nodejs_eventloop_delay_mean",
+          "expr": "nodejs_eventloop_delay_mean{job=~\"${services:regex}\"}",
           "legendFormat": "{{job}}"
         }
       ],
@@ -338,7 +353,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "sum by (job) (process_cpu_utilization)",
+          "expr": "sum by (job) (process_cpu_utilization{job=~\"${services:regex}\"})",
           "legendFormat": "{{job}}"
         }
       ],
@@ -367,7 +382,7 @@
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "process_memory_usage",
+          "expr": "process_memory_usage{job=~\"${services:regex}\"}",
           "legendFormat": "{{job}}"
         }
       ],
@@ -398,7 +413,7 @@
         {
           "refId": "A",
           "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
-          "expr": "sum by (service_name, detected_level) (count_over_time({service_name=~\".+\"}[$__interval]))",
+          "expr": "sum by (service_name, detected_level) (count_over_time({service_name=~\"${services:regex}\"}[$__interval]))",
           "legendFormat": "{{service_name}} ({{detected_level}})"
         }
       ],
@@ -439,7 +454,7 @@
         {
           "refId": "A",
           "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
-          "expr": "{service_name=~\".+\"}"
+          "expr": "{service_name=~\"${services:regex}\"}"
         }
       ],
       "options": {
@@ -468,7 +483,7 @@
           "refId": "A",
           "datasource": {"type": "tempo", "uid": "P214B5B846CF3925F"},
           "queryType": "traceql",
-          "query": "{}",
+          "query": "{ resource.service.name =~ \"${services:regex}\" }",
           "tableType": "traces",
           "limit": 30
         }
