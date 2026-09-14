@@ -19,12 +19,12 @@
         "description": "Auto-discovered from services emitting process_runtime_dotnet_gc_collections_count (only .NET services using Panther.OpenTelemetry do). Multi-select to compare a subset; defaults to All.",
         "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
         "query": "label_values(process_runtime_dotnet_gc_collections_count, job)",
-        "refresh": 2,
+        "refresh": 1,
         "sort": 1,
         "multi": true,
         "includeAll": true,
         "allValue": ".*",
-        "current": { "text": "All", "value": "$__all" },
+        "current": { "selected": true, "text": ["All"], "value": ["$__all"] },
         "hide": 0
       },
       {
