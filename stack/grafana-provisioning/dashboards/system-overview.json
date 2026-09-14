@@ -18,7 +18,7 @@
         "label": "Services",
         "description": "Auto-discovered across every instrumented service (Node and .NET). Multi-select to compare a subset; defaults to All.",
         "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-        "query": "label_values(up{job!=\"\"} or nodejs_eventloop_delay_mean or http_server_duration_count or process_runtime_dotnet_gc_collections_count, job)",
+        "query": "label_values(job)",
         "refresh": 1,
         "sort": 1,
         "multi": true,
