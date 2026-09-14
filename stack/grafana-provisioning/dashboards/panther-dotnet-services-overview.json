@@ -1,8 +1,8 @@
 {
-  "title": "Panther System - Full Observability",
-  "description": "System-wide view across all instrumented Panther microservices (AuthService, RoomManager, DeviceManager, ImportExportService, WebSocketGateway) - service graph, per-service KPIs, logs, and traces.",
-  "uid": "panther-system-overview",
-  "tags": ["panther", "system", "opentelemetry", "service-graph"],
+  "title": "Panther .NET Services - Overview",
+  "description": "Multi-service view across every .NET service using the Panther.OpenTelemetry library. Scoped automatically via .NET-only metric names (http_server_request_duration_*, process_runtime_dotnet_gc_*), which Node services never emit - no per-service hardcoding needed. Use the '.NET Services' variable to narrow to specific services; defaults to all of them together, mirroring system-overview.json's all-services approach.",
+  "uid": "panther-dotnet-services-overview",
+  "tags": ["dotnet", "panther-opentelemetry", "opentelemetry", "mimir", "loki", "tempo"],
   "editable": true,
   "graphTooltip": 1,
   "timezone": "browser",
@@ -13,12 +13,12 @@
   "templating": {
     "list": [
       {
-        "name": "services",
+        "name": "dotnet_services",
         "type": "query",
-        "label": "Services",
-        "description": "Auto-discovered across every instrumented service (Node and .NET). Multi-select to compare a subset; defaults to All.",
+        "label": ".NET Services",
+        "description": "Auto-discovered from services emitting process_runtime_dotnet_gc_collections_count (only .NET services using Panther.OpenTelemetry do). Multi-select to compare a subset; defaults to All.",
         "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-        "query": "label_values(job)",
+        "query": "label_values(process_runtime_dotnet_gc_collections_count, job)",
         "refresh": 1,
         "sort": 1,
         "multi": true,
@@ -39,20 +39,20 @@
     ]
   },
   "panels": [
-    { "id": 1, "type": "row", "title": "System KPIs", "collapsed": false, "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "panels": [] },
+    { "id": 1, "type": "row", "title": ".NET Services KPIs", "collapsed": false, "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "panels": [] },
 
     {
       "id": 2,
       "type": "stat",
-      "title": "Services Reporting",
-      "description": "Count of distinct instrumented services that have reported telemetry in the selected range.",
+      "title": ".NET Services Reporting",
+      "description": "Count of distinct .NET services (matching the selection above) that have reported telemetry in the selected range.",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
       "gridPos": { "x": 0, "y": 1, "w": 6, "h": 5 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "count(count by (job) (up{job=~\"${services:regex}\"} or nodejs_eventloop_delay_mean{job=~\"${services:regex}\"} or http_server_duration_count{job=~\"${services:regex}\"} or process_runtime_dotnet_gc_collections_count{job=~\"${services:regex}\"}))",
+          "expr": "count(count by (job) (process_runtime_dotnet_gc_collections_count{job=~\"${dotnet_services:regex}\"}))",
           "instant": true,
           "range": false
         }
@@ -78,15 +78,15 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Total HTTP Requests (system-wide)",
-      "description": "Total inbound HTTP requests across every instrumented service over the selected range.",
+      "title": "Total HTTP Requests (.NET, selected services)",
+      "description": "Total inbound HTTP requests across the selected .NET services over the selected range (OpenTelemetry.Instrumentation.AspNetCore).",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
       "gridPos": { "x": 6, "y": 1, "w": 6, "h": 5 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "sum(increase(http_server_duration_count{job=~\"${services:regex}\"}[$__range]))",
+          "expr": "sum(increase(http_server_request_duration_count{job=~\"${dotnet_services:regex}\"}[$__range]))",
           "instant": true,
           "range": false
         }
@@ -112,15 +112,15 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "System-Wide Error Rate",
-      "description": "Share of requests with a 4xx/5xx status code vs total, across every service.",
+      "title": "Error Rate % (.NET, selected services)",
+      "description": "Share of requests with a 5xx status code vs total, across the selected .NET services.",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
       "gridPos": { "x": 12, "y": 1, "w": 6, "h": 5 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "100 * sum(increase(http_server_duration_count{job=~\"${services:regex}\", http_status_code=~\"4..|5..\"}[$__range])) / sum(increase(http_server_duration_count{job=~\"${services:regex}\"}[$__range]))",
+          "expr": "100 * sum(increase(http_server_request_duration_count{job=~\"${dotnet_services:regex}\", http_response_status_code=~\"5..\"}[$__range])) / sum(increase(http_server_request_duration_count{job=~\"${dotnet_services:regex}\"}[$__range]))",
           "instant": true,
           "range": false
         }
@@ -155,15 +155,15 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "95th Percentile Latency (system-wide)",
-      "description": "p95 HTTP server request duration across all services over the last 5m.",
+      "title": "95th Percentile Latency (.NET, selected services)",
+      "description": "p95 HTTP server request duration across the selected .NET services over the last 5m.",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
       "gridPos": { "x": 18, "y": 1, "w": 6, "h": 5 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_duration_bucket{job=~\"${services:regex}\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_bucket{job=~\"${dotnet_services:regex}\"}[5m])))",
           "instant": true,
           "range": false
         }
@@ -178,14 +178,14 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "ms",
-          "decimals": 1,
+          "unit": "s",
+          "decimals": 3,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "orange", "value": 200 },
-              { "color": "red", "value": 500 }
+              { "color": "orange", "value": 0.2 },
+              { "color": "red", "value": 0.5 }
             ]
           }
         },
@@ -193,54 +193,20 @@
       }
     },
 
-    { "id": 6, "type": "row", "title": "Service Dependency Graph", "collapsed": false, "gridPos": { "x": 0, "y": 6, "w": 24, "h": 1 } },
+    { "id": 6, "type": "row", "title": "Per-Service Performance", "collapsed": false, "gridPos": { "x": 0, "y": 6, "w": 24, "h": 1 } },
 
     {
       "id": 7,
-      "type": "table",
-      "title": "Services Table (rate / error rate / duration)",
-      "description": "Per-service request rate, error rate, and p90 duration, computed by Tempo's metrics-generator from real traces.",
-      "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
-      "gridPos": { "x": 0, "y": 7, "w": 24, "h": 8 },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
-          "queryType": "serviceMap"
-        }
-      ]
-    },
-
-    {
-      "id": 8,
-      "type": "nodeGraph",
-      "title": "Full System Node Graph",
-      "description": "Live service map across the entire Panther system, computed by Tempo's metrics-generator (service-graphs processor) from real traces. Every node and edge here reflects an actual observed call.",
-      "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
-      "gridPos": { "x": 0, "y": 15, "w": 24, "h": 14 },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
-          "queryType": "serviceMap"
-        }
-      ]
-    },
-
-    { "id": 9, "type": "row", "title": "Per-Service Performance", "collapsed": false, "gridPos": { "x": 0, "y": 29, "w": 24, "h": 1 } },
-
-    {
-      "id": 10,
       "type": "timeseries",
       "title": "Request Rate by Service",
-      "description": "Requests per second, split by service (job).",
+      "description": "Requests per second, split by .NET service (job).",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-      "gridPos": { "x": 0, "y": 30, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "sum by (job) (rate(http_server_duration_count{job=~\"${services:regex}\"}[$__rate_interval]))",
+          "expr": "sum by (job) (rate(http_server_request_duration_count{job=~\"${dotnet_services:regex}\"}[$__rate_interval]))",
           "legendFormat": "{{job}}"
         }
       ],
@@ -258,17 +224,17 @@
     },
 
     {
-      "id": 11,
+      "id": 8,
       "type": "timeseries",
       "title": "p95 Latency by Service",
-      "description": "95th percentile HTTP server request duration, split by service (job).",
+      "description": "95th percentile HTTP server request duration, split by .NET service (job).",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-      "gridPos": { "x": 12, "y": 30, "w": 12, "h": 8 },
+      "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_server_duration_bucket{job=~\"${services:regex}\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_server_request_duration_bucket{job=~\"${dotnet_services:regex}\"}[5m])))",
           "legendFormat": "{{job}}"
         }
       ],
@@ -278,7 +244,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "ms",
+          "unit": "s",
           "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5, "spanNulls": true }
         },
         "overrides": []
@@ -286,17 +252,17 @@
     },
 
     {
-      "id": 12,
+      "id": 9,
       "type": "timeseries",
-      "title": "Error Rate by Service",
-      "description": "Share of requests returning 4xx/5xx, split by service (job).",
+      "title": "Error Rate % by Service",
+      "description": "Share of requests returning 5xx, split by .NET service (job).",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-      "gridPos": { "x": 0, "y": 38, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "100 * sum by (job) (rate(http_server_duration_count{job=~\"${services:regex}\", http_status_code=~\"4..|5..\"}[$__rate_interval])) / sum by (job) (rate(http_server_duration_count{job=~\"${services:regex}\"}[$__rate_interval]))",
+          "expr": "100 * sum by (job) (rate(http_server_request_duration_count{job=~\"${dotnet_services:regex}\", http_response_status_code=~\"5..\"}[$__rate_interval])) / sum by (job) (rate(http_server_request_duration_count{job=~\"${dotnet_services:regex}\"}[$__rate_interval]))",
           "legendFormat": "{{job}}"
         }
       ],
@@ -315,18 +281,18 @@
     },
 
     {
-      "id": 13,
+      "id": 10,
       "type": "timeseries",
-      "title": "Event Loop Delay by Service",
-      "description": "Node.js event loop delay (mean), split by service - a rising trend indicates a process falling behind.",
+      "title": "Request Throughput by Status Code (all selected services)",
+      "description": "Requests per second across the selected .NET services, split by HTTP status code.",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-      "gridPos": { "x": 12, "y": 38, "w": 12, "h": 8 },
+      "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "nodejs_eventloop_delay_mean{job=~\"${services:regex}\"}",
-          "legendFormat": "{{job}}"
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_count{job=~\"${dotnet_services:regex}\"}[$__rate_interval]))",
+          "legendFormat": "{{http_response_status_code}}"
         }
       ],
       "options": {
@@ -335,7 +301,46 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "reqps",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "500" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "200" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          }
+        ]
+      }
+    },
+
+    { "id": 11, "type": "row", "title": ".NET Runtime Health", "collapsed": false, "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 } },
+
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "GC Collections by Service & Generation",
+      "description": "process.runtime.dotnet.gc.collections.count from OpenTelemetry.Instrumentation.Runtime, split by service and generation.",
+      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
+          "expr": "sum by (job, generation) (process_runtime_dotnet_gc_collections_count{job=~\"${dotnet_services:regex}\"})",
+          "legendFormat": "{{job}} - gen {{generation}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
           "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5, "spanNulls": true }
         },
         "overrides": []
@@ -343,46 +348,17 @@
     },
 
     {
-      "id": 22,
+      "id": 13,
       "type": "timeseries",
-      "title": "Process CPU Utilization by Service",
-      "description": "Node.js process CPU utilization (user + system time), split by service. From @opentelemetry/host-metrics.",
+      "title": "GC Heap Size by Service",
+      "description": "process.runtime.dotnet.gc.objects.size - total bytes on the managed heap, split by service.",
       "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-      "gridPos": { "x": 0, "y": 46, "w": 12, "h": 8 },
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 7 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "sum by (job) (process_cpu_utilization{job=~\"${services:regex}\"})",
-          "legendFormat": "{{job}}"
-        }
-      ],
-      "options": {
-        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
-        },
-        "overrides": []
-      }
-    },
-
-    {
-      "id": 23,
-      "type": "timeseries",
-      "title": "Process Memory (RSS) by Service",
-      "description": "Node.js process resident memory usage, split by service. From @opentelemetry/host-metrics.",
-      "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-      "gridPos": { "x": 12, "y": 46, "w": 12, "h": 8 },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {"type": "prometheus", "uid": "PAE45454D0EDB9216"},
-          "expr": "process_memory_usage{job=~\"${services:regex}\"}",
+          "expr": "process_runtime_dotnet_gc_objects_size{job=~\"${dotnet_services:regex}\"}",
           "legendFormat": "{{job}}"
         }
       ],
@@ -393,27 +369,26 @@
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
-          "min": 0,
           "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
         },
         "overrides": []
       }
     },
 
-    { "id": 14, "type": "row", "title": "Logs Across the System", "collapsed": false, "gridPos": { "x": 0, "y": 54, "w": 24, "h": 1 } },
+    { "id": 14, "type": "row", "title": "Logs Across .NET Services", "collapsed": false, "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 } },
 
     {
       "id": 15,
       "type": "timeseries",
       "title": "Log Volume by Service and Level",
-      "description": "Log lines per service per level, from Loki.",
+      "description": "Log lines per selected .NET service per level, from Loki.",
       "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
-      "gridPos": { "x": 0, "y": 55, "w": 24, "h": 7 },
+      "gridPos": { "x": 0, "y": 32, "w": 24, "h": 7 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
-          "expr": "sum by (service_name, detected_level) (count_over_time({service_name=~\"${services:regex}\"}[$__interval]))",
+          "expr": "sum by (service_name, detected_level) (count_over_time({service_name=~\"${dotnet_services:regex}\"}[$__interval]))",
           "legendFormat": "{{service_name}} ({{detected_level}})"
         }
       ],
@@ -432,10 +407,6 @@
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
           },
           {
-            "matcher": { "id": "byRegexp", "options": ".*\\(FATAL\\)" },
-            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "dark-red" } }]
-          },
-          {
             "matcher": { "id": "byRegexp", "options": ".*\\(WARN\\)" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
           }
@@ -446,15 +417,15 @@
     {
       "id": 16,
       "type": "logs",
-      "title": "Live Logs (all services)",
-      "description": "Live combined log stream across every instrumented Panther service.",
+      "title": "Live Logs (.NET services)",
+      "description": "Live combined log stream across the selected .NET services, shipped via Panther.OpenTelemetry's AddPantherOpenTelemetry() -> ILogger -> OTLP -> Loki.",
       "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
-      "gridPos": { "x": 0, "y": 62, "w": 24, "h": 9 },
+      "gridPos": { "x": 0, "y": 39, "w": 24, "h": 9 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
-          "expr": "{service_name=~\"${services:regex}\"}"
+          "expr": "{service_name=~\"${dotnet_services:regex}\"}"
         }
       ],
       "options": {
@@ -469,21 +440,21 @@
       }
     },
 
-    { "id": 17, "type": "row", "title": "Traces Across the System", "collapsed": false, "gridPos": { "x": 0, "y": 71, "w": 24, "h": 1 } },
+    { "id": 17, "type": "row", "title": "Traces Across .NET Services", "collapsed": false, "gridPos": { "x": 0, "y": 48, "w": 24, "h": 1 } },
 
     {
       "id": 18,
       "type": "table",
-      "title": "Recent Traces (all services) - click a Trace ID to open it, or copy it into the Trace ID box above",
-      "description": "Most recent traces across every instrumented service. Clicking a Trace ID opens the full waterfall in Explore; copying it into the 'Trace ID' dashboard variable renders the waterfall inline below.",
+      "title": "Recent Traces (.NET services) - click a Trace ID to open it, or copy it into the Trace ID box above",
+      "description": "Most recent traces across the selected .NET services. Clicking a Trace ID opens the full waterfall in Explore; copying it into the 'Trace ID' dashboard variable renders the waterfall inline below.",
       "datasource": {"type": "tempo", "uid": "P214B5B846CF3925F"},
-      "gridPos": { "x": 0, "y": 72, "w": 24, "h": 9 },
+      "gridPos": { "x": 0, "y": 49, "w": 24, "h": 9 },
       "targets": [
         {
           "refId": "A",
           "datasource": {"type": "tempo", "uid": "P214B5B846CF3925F"},
           "queryType": "traceql",
-          "query": "{ resource.service.name =~ \"${services:regex}\" }",
+          "query": "{ resource.service.name =~ \"${dotnet_services:regex}\" }",
           "tableType": "traces",
           "limit": 30
         }
@@ -497,7 +468,7 @@
       "description": "Full span waterfall for the Trace ID entered in the 'Trace ID' variable above.",
       "datasource": { "type": "tempo", "uid": "P214B5B846CF3925F" },
       "timeFrom": "24h",
-      "gridPos": { "x": 0, "y": 81, "w": 24, "h": 16 },
+      "gridPos": { "x": 0, "y": 58, "w": 24, "h": 16 },
       "targets": [
         {
           "refId": "A",
@@ -508,26 +479,6 @@
       ],
       "options": {
         "showSpanFilters": true
-      }
-    },
-
-    { "id": 20, "type": "row", "title": "Panther Alerts", "collapsed": false, "gridPos": { "x": 0, "y": 97, "w": 24, "h": 1 } },
-
-    {
-      "id": 21,
-      "type": "alertlist",
-      "title": "Panther Alert Rules",
-      "description": "Live state of all provisioned Panther alert rules (High Error Rate, High p95 Latency, High Error Log Volume, Services Missing). Rows turn yellow/red as rules move Pending/Alerting.",
-      "gridPos": { "x": 0, "y": 98, "w": 24, "h": 9 },
-      "options": {
-        "maxItems": 20,
-        "sortOrder": 3,
-        "dashboardAlerts": false,
-        "alertName": "",
-        "groupMode": "default",
-        "groupBy": [],
-        "stateFilter": { "firing": true, "pending": true, "noData": true, "normal": true, "error": true },
-        "viewMode": "list"
       }
     }
   ]
