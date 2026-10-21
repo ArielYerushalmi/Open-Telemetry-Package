@@ -9,7 +9,7 @@ import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { BatchSpanProcessor, ParentBasedSampler, SpanProcessor, TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-base';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { resourceFromAttributes } from '@opentelemetry/resources';
-import { diag, DiagConsoleLogger, DiagLogLevel, metrics } from '@opentelemetry/api';
+import { diag, metrics } from '@opentelemetry/api';
 import { HostMetrics } from '@opentelemetry/host-metrics';
 
 const EXPORT_TIMEOUT_MS = 5_000;
@@ -31,9 +31,6 @@ export function initOpenTelemetry(config: OtelConfig): NodeSDK {
     if (!config.alloyUrl) {
         throw new Error('alloyUrl is required in OpenTelemetry configuration');
     }
-
-    // Without this, failed exports/dropped spans are swallowed with no visibility.
-    diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
 
     const appResource = resourceFromAttributes({
         [ATTR_SERVICE_NAME]: config.serviceName,
@@ -86,6 +83,9 @@ export function initOpenTelemetry(config: OtelConfig): NodeSDK {
             }),
         ],
     });
+
+    // NodeSDK installs a console logger when OTEL_LOG_LEVEL is set; keep the host service's terminal clean.
+    diag.disable();
 
     // Store instance for shutdown
     sdkInstance = sdk;
